@@ -1,9 +1,12 @@
 import os
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 import numpy as np
 import pandas as pd
 from nnAudio.Spectrogram import CQT1992v2
+from scipy.stats import shapiro
+import matplotlib.pyplot as plt
 
 # Get CQT transform, create a function for data preprocessing
 transform = CQT1992v2(sr=2048, fmin=22, fmax=1024,
@@ -23,7 +26,7 @@ def wave2spectrogram(raw_data):
     prep_res[:, :, 0] /= prep_res[:, :, 0].max()
     prep_res[:, :, 1] /= prep_res[:, :, 1].max()
     prep_res[:, :, 2] /= prep_res[:, :, 2].max()
-    return prep_res
+    return torch.from_numpy(prep_res)
 
 
 def gray_filtering(unfiltered_data, filter_func=np.min):
@@ -37,6 +40,7 @@ class G2NetDataSet(Dataset):
         Dataset.__init__(self)
         self.main_folder = main_folder
         self.set_type = set_type
+        self.transform = None
         # Getting the list of all entries in folder
         self.files_list = []
         for dirpath, dirname, filenames in os.walk(os.path.join(main_folder, set_type)):
@@ -47,6 +51,25 @@ class G2NetDataSet(Dataset):
             self.labels_list = pd.read_csv(os.path.join(main_folder, labels_file))
         else:
             self.labels_list = None
+
+        self.files_list = self.files_list[:500]
+
+        self.mean = None
+        mean_sq = None
+        for a, _, _ in self:
+            if self.mean is None:
+                self.mean = a
+                mean_sq = torch.pow(a, 2)
+            else:
+                self.mean += a
+                mean_sq += torch.pow(a, 2)
+
+        if self.mean is not None:
+            self.mean /= len(self)
+            self.std = torch.pow((mean_sq / len(self)- torch.pow(self.mean, 2)), 0.5)
+
+        self.transform = transforms.Compose([transforms.Normalize(self.mean, self.std)])
+
 
     def __len__(self):
         return len(self.files_list)
@@ -59,4 +82,8 @@ class G2NetDataSet(Dataset):
         else:
             label = None
 
-        return wave2spectrogram(np.load(self.files_list[idx])), np.array([label], dtype=float), filename_short
+        data = wave2spectrogram(np.load(self.files_list[idx]))
+        if self.transform:
+            data = self.transform(data)
+
+        return data, np.array([label], dtype=float), filename_short
