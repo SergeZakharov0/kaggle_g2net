@@ -7,6 +7,7 @@ import pandas as pd
 from nnAudio.Spectrogram import CQT1992v2
 from scipy.stats import shapiro
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # Get CQT transform, create a function for data preprocessing
 transform = CQT1992v2(sr=2048, fmin=22, fmax=1024,
@@ -52,11 +53,11 @@ class G2NetDataSet(Dataset):
         else:
             self.labels_list = None
 
-        self.files_list = self.files_list[:500]
+        self.files_list = self.files_list[:2000]
 
         self.mean = None
         mean_sq = None
-        for a, _, _ in self:
+        for a, _, _ in tqdm(self):
             if self.mean is None:
                 self.mean = a
                 mean_sq = torch.pow(a, 2)
