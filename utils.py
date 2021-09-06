@@ -29,7 +29,7 @@ def wave2spectrogram(raw_data):
     prep_res[:, :, 2] /= prep_res[:, :, 2].max()
     return torch.from_numpy(prep_res)
 
-
+  
 class G2NetDataSet(Dataset):
     def __init__(self, main_folder, set_type, labels_file=None, 
                  subset_ind=None, mean=None, std=None):
@@ -54,6 +54,7 @@ class G2NetDataSet(Dataset):
             self.mean = mean
             self.std = std
             self.transform = transforms.Compose([transforms.Normalize(self.mean, self.std)])
+
 
     def __len__(self):
         return len(self.files_list)
