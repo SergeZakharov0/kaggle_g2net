@@ -7,6 +7,7 @@ import pandas as pd
 from nnAudio.Spectrogram import CQT1992v2
 from scipy.stats import shapiro
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # Get CQT transform, create a function for data preprocessing
 transform = CQT1992v2(sr=2048, fmin=22, fmax=1024,
@@ -36,7 +37,7 @@ def gray_filtering(unfiltered_data, filter_func=np.min):
 
 
 class G2NetDataSet(Dataset):
-    def __init__(self, main_folder, set_type, labels_file=None):
+    def __init__(self, main_folder, set_type, labels_file=None, subset_ind=None):
         Dataset.__init__(self)
         self.main_folder = main_folder
         self.set_type = set_type
@@ -51,12 +52,12 @@ class G2NetDataSet(Dataset):
             self.labels_list = pd.read_csv(os.path.join(main_folder, labels_file))
         else:
             self.labels_list = None
-
-        self.files_list = self.files_list[:500]
+        if subset_ind is not None:
+            self.files_list = np.array(self.files_list)[subset_ind]
 
         self.mean = None
         mean_sq = None
-        for a, _, _ in self:
+        for a, _, _ in tqdm(self):
             if self.mean is None:
                 self.mean = a
                 mean_sq = torch.pow(a, 2)
