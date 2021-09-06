@@ -29,15 +29,10 @@ def wave2spectrogram(raw_data):
     prep_res[:, :, 2] /= prep_res[:, :, 2].max()
     return torch.from_numpy(prep_res)
 
-
-def gray_filtering(unfiltered_data, filter_func=np.min):
-    # Noise filtering. Rounds everything to the colours of gray
-    min_color_data = filter_func(unfiltered_data, axis=2, keepdims=True)
-    return np.concatenate((min_color_data, min_color_data, min_color_data), axis=2)
-
-
+  
 class G2NetDataSet(Dataset):
-    def __init__(self, main_folder, set_type, labels_file=None, subset_ind=None):
+    def __init__(self, main_folder, set_type, labels_file=None, 
+                 subset_ind=None, mean=None, std=None):
         Dataset.__init__(self)
         self.main_folder = main_folder
         self.set_type = set_type
@@ -54,22 +49,11 @@ class G2NetDataSet(Dataset):
             self.labels_list = None
         if subset_ind is not None:
             self.files_list = np.array(self.files_list)[subset_ind]
-
-        self.mean = None
-        mean_sq = None
-        for a, _, _ in tqdm(self):
-            if self.mean is None:
-                self.mean = a
-                mean_sq = torch.pow(a, 2)
-            else:
-                self.mean += a
-                mean_sq += torch.pow(a, 2)
-
-        if self.mean is not None:
-            self.mean /= len(self)
-            self.std = torch.pow((mean_sq / len(self)- torch.pow(self.mean, 2)), 0.5)
-
-        self.transform = transforms.Compose([transforms.Normalize(self.mean, self.std)])
+        # Create a transform for data normalization if necessary
+        if mean is not None and std is not None:
+            self.mean = mean
+            self.std = std
+            self.transform = transforms.Compose([transforms.Normalize(self.mean, self.std)])
 
 
     def __len__(self):
@@ -82,7 +66,7 @@ class G2NetDataSet(Dataset):
             label = self.labels_list[self.labels_list.id == filename_short].to_numpy()[0, 1]
         else:
             label = None
-
+        # Transform data
         data = wave2spectrogram(np.load(self.files_list[idx]))
         if self.transform:
             data = self.transform(data)
