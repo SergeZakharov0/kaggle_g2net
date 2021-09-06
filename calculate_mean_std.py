@@ -18,7 +18,6 @@ for dirpath, dirname, filenames in os.walk(os.path.join(main_folder, set_type)):
     for filename in filenames:
         train_list += [os.path.join(dirpath, filename)]
 
-
 def yield_data():
     for t in tqdm(train_list):
         yield wave2spectrogram(np.load(t))
@@ -36,5 +35,5 @@ ss = sum(gen_2)
 torch.save(ss, 'sq_sum')
 
 torch.save(s/len(train_list), 'mean')
-torch.save(ss/len(train_list)-torch.pow(s/train_list), 'variance')
-torch.save(torch.pow(ss/len(train_list)-torch.pow(s/train_list), 1/2), 'std')
+torch.save(ss/len(train_list)-torch.pow(s/len(train_list), 2), 'variance')
+torch.save(torch.pow(ss/len(train_list)-torch.pow(s/len(train_list), 2), 1/2), 'std')
