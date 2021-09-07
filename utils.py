@@ -47,6 +47,7 @@ class G2NetDataSet(Dataset):
             self.labels_list = pd.read_csv(os.path.join(main_folder, labels_file))
         else:
             self.labels_list = None
+        self.labels_list.index = self.labels_list.id.values
         if subset_ind is not None:
             self.files_list = np.array(self.files_list)[subset_ind]
         # Create a transform for data normalization if necessary
@@ -63,7 +64,7 @@ class G2NetDataSet(Dataset):
         filename_short = os.path.basename(self.files_list[idx]).split('.')[0]
         # Add labels if possible
         if self.labels_list is not None:
-            label = self.labels_list[self.labels_list.id == filename_short].to_numpy()[0, 1]
+            label = self.labels_list.loc[filename_short].to_numpy()[1]
         else:
             label = None
         # Transform data
