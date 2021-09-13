@@ -2,31 +2,44 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import model
-import utils
+import dataset
 import numpy as np
+import torchvision.models as models
+import cv2
 
-mean = torch.load('mean')
-std = torch.load('std')
+
+def preprocess(x):
+    # Transpose for Resnext
+    x = x.transpose((2, 1, 0))
+    # To [0;1]
+    x = x / 255
+    # Normalize
+    mean = [0.05955338788342238, 0.05964520301283479, 0.07473762879218654]
+    std = [0.10204760808674686, 0.10211863743338652, 0.10066736813404807]
+    for ch in range(0, 3):
+        x[ch] = (x[ch] - mean[ch]) / std[ch]
+    return x
+
+
+labels_file = '/slowfs/datasets/g2net-gravitational-wave-detection/training_labels.csv'
 # Define training data loader
-train_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-gravitational-wave-detection',
-                                   set_type='train',
-                                   labels_file='training_labels.csv', subset_ind=range(20000),
-                                   mean=mean, std=std)
+train_dataset = dataset.SingleLoadDataset(folder='/slowfs/datasets/g2net-224x224', read_function=cv2.imread,
+                                          labels_file=labels_file, subset_ind=range(500000),
+                                          preprocess=preprocess)
 train_loader = DataLoader(train_dataset, batch_size=64)
 # Define validation data loader
-val_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-gravitational-wave-detection',
-                                   set_type='train',
-                                   labels_file='training_labels.csv', subset_ind=range(20000, 25000),
-                                   mean=mean, std=std)
+val_dataset = dataset.SingleLoadDataset(folder='/slowfs/datasets/g2net-224x224', read_function=cv2.imread,
+                                        labels_file=labels_file, subset_ind=range(500000, 560000),
+                                        preprocess=preprocess)
 val_loader = DataLoader(val_dataset, batch_size=64)
 
 # Define models
-model = model.Model()
+model = model.Model(models.resnext50_32x4d())
 model.zero_grad()
 
 # Define loss and optimizer
 criterion = torch.nn.BCELoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
 
 # Training
 for epoch in range(1, 50):
@@ -38,7 +51,7 @@ for epoch in range(1, 50):
         # zero the parameter gradients
         optimizer.zero_grad()
         # forward + backward + optimize
-        outputs = model(inputs)
+        outputs = model(inputs.float()).squeeze()
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -57,6 +70,6 @@ for epoch in range(1, 50):
         progress_bar.set_postfix({'acc': float(np.mean(acc))})
     # Save the models after every fifth
     if epoch % 5 == 0:
-        torch.save(model, "models/logit_v3_"+str(epoch)+".pt")
+        torch.save(model, "models/resnext_v1_"+str(epoch)+".pt")
 
 print('Finished Training')
