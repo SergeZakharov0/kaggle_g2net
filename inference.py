@@ -9,7 +9,8 @@ test_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-128x128-no
 test_loader = DataLoader(test_dataset)
 
 # Load the model
-model = torch.load('models/logit_v3_20.pt')
+torch.device('cpu')
+model = torch.load('models/logit_v3_25.pt', map_location='cpu')
 
 # Inference
 with open('output.csv', 'w') as output_file:
