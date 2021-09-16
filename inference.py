@@ -4,12 +4,12 @@ from torch.utils.data import DataLoader
 import utils
 
 # Define training data loader
-test_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-gravitational-wave-detection',
+test_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-128x128-normalized',
                                   set_type='test')
 test_loader = DataLoader(test_dataset)
 
 # Load the model
-model = torch.load('models/logit_v1.pt')
+model = torch.load('models/logit_v3_20.pt')
 
 # Inference
 with open('output.csv', 'w') as output_file:

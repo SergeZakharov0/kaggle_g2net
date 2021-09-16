@@ -41,13 +41,13 @@ class G2NetDataSet(Dataset):
         self.files_list = []
         for dirpath, dirname, filenames in os.walk(os.path.join(main_folder, set_type)):
             for filename in filenames:
-                self.files_list += [os.path.join(dirpath,filename)]
+                self.files_list += [os.path.join(dirpath, filename)]
         # Read labels if necessary
         if labels_file:
             self.labels_list = pd.read_csv(os.path.join(main_folder, labels_file))
+            self.labels_list.index = self.labels_list.id.values
         else:
             self.labels_list = None
-        self.labels_list.index = self.labels_list.id.values
         if subset_ind is not None:
             self.files_list = np.array(self.files_list)[subset_ind]
         # Create a transform for data normalization if necessary
@@ -55,12 +55,17 @@ class G2NetDataSet(Dataset):
             self.mean = mean
             self.std = std
             self.transform = transforms.Compose([transforms.Normalize(self.mean, self.std)])
+        self.all_time = 0
+        self.alt_labels_time = 0
 
 
     def __len__(self):
         return len(self.files_list)
 
     def __getitem__(self, idx):
+        import time
+        t0 = time.time()
+        import time
         filename_short = os.path.basename(self.files_list[idx]).split('.')[0]
         # Add labels if possible
         if self.labels_list is not None:
@@ -68,8 +73,8 @@ class G2NetDataSet(Dataset):
         else:
             label = None
         # Transform data
-        data = wave2spectrogram(np.load(self.files_list[idx]))
-        if self.transform:
-            data = self.transform(data)
-
+        data = torch.load(self.files_list[idx])[0]
+        # if self.transform:
+        #     data = self.transform(data)
+        self.all_time += time.time() -t0
         return data, np.array([label], dtype=float), filename_short

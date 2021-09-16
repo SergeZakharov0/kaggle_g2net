@@ -8,16 +8,14 @@ import numpy as np
 mean = torch.load('mean')
 std = torch.load('std')
 # Define training data loader
-train_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-gravitational-wave-detection',
+train_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-128x128-normalized',
                                    set_type='train',
-                                   labels_file='training_labels.csv', subset_ind=range(20000),
-                                   mean=mean, std=std)
+                                   labels_file='training_labels.csv', subset_ind=range(0, 540000))
 train_loader = DataLoader(train_dataset, batch_size=64)
 # Define validation data loader
-val_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-gravitational-wave-detection',
+val_dataset = utils.G2NetDataSet(main_folder='/slowfs/datasets/g2net-128x128-normalized',
                                    set_type='train',
-                                   labels_file='training_labels.csv', subset_ind=range(20000, 25000),
-                                   mean=mean, std=std)
+                                   labels_file='training_labels.csv', subset_ind=range(540000, 550002))
 val_loader = DataLoader(val_dataset, batch_size=64)
 
 # Define models
@@ -27,7 +25,8 @@ model.zero_grad()
 # Define loss and optimizer
 criterion = torch.nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
-
+import time
+t0 = time.time()
 # Training
 for epoch in range(1, 50):
     progress_bar = tqdm(train_loader)
@@ -53,10 +52,12 @@ for epoch in range(1, 50):
         inputs, labels, filename = data
         outputs = model(inputs)
         outputs = (outputs > 0.5).float()
-        acc += [(outputs == labels).float().sum()/len(outputs)]
+        acc += [(outputs == labels).float()]
         progress_bar.set_postfix({'acc': float(np.mean(acc))})
     # Save the models after every fifth
     if epoch % 5 == 0:
         torch.save(model, "models/logit_v3_"+str(epoch)+".pt")
 
+    print(time.time()-t0)
+    print(train_dataset.all_time)
 print('Finished Training')
